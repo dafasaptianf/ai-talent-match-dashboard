@@ -16,51 +16,36 @@ SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ========== SIDEBAR INPUT ==========
-st.sidebar.header("🎯 Job Vacancy Parameters")
+st.sidebar.header(" Job Vacancy Parameters")
 
 role = st.sidebar.text_input("Role Name", "Data Engineer")
 level = st.sidebar.selectbox("Job Level", ["Staff", "Senior", "Manager"])
 purpose = st.sidebar.text_area("Role Purpose", "Responsible for building scalable data pipelines.")
 
-# =====================================================
-# 🧩 1️⃣ Ambil daftar employee_id langsung dari Supabase
-# =====================================================
 try:
     employees_resp = supabase.table("employees").select("employee_id, fullname").execute()
     employees = employees_resp.data or []
 except Exception as e:
-    st.sidebar.error(f"❌ Gagal mengambil data dari Supabase: {e}")
+    st.sidebar.error(f"Gagal mengambil data dari Supabase: {e}")
     employees = []
 
-# =====================================================
-# 🧩 2️⃣ Jika tabel employees kosong, coba ambil dari tabel lain
-# =====================================================
 if not employees:
-    st.sidebar.warning("⚠️ Table employees kosong. Mencoba ambil data dari competencies_yearly.")
+    st.sidebar.warning("Table employees kosong. Mencoba ambil data dari competencies_yearly.")
     try:
         emp_fallback = supabase.table("competencies_yearly").select("employee_id").execute()
         emp_ids = list({e["employee_id"] for e in emp_fallback.data})  # unique IDs
         employees = [{"employee_id": e, "fullname": f"Employee {i+1}"} for i, e in enumerate(emp_ids)]
     except Exception as e:
-        st.sidebar.error(f"❌ Tidak ada data employee_id di Supabase. Error: {e}")
+        st.sidebar.error(f"Tidak ada data employee_id di Supabase. Error: {e}")
         employees = []
 
-# =====================================================
-# 🧩 3️⃣ Jika tetap kosong, tampilkan error & stop
-# =====================================================
 if not employees:
-    st.sidebar.error("❌ Tidak ada employee_id di Supabase. Harap isi data di tabel employees / competencies_yearly.")
+    st.sidebar.error("Tidak ada employee_id di Supabase. Harap isi data di tabel employees / competencies_yearly.")
     st.stop()
 
-# =====================================================
-# 🧩 4️⃣ Siapkan daftar employee_id dan nama
-# =====================================================
 employee_list = [e["employee_id"] for e in employees]
 employee_names = [e.get("fullname", e["employee_id"]) for e in employees]
 
-# =====================================================
-# 🧩 5️⃣ Benchmark selector
-# =====================================================
 benchmarks = st.sidebar.multiselect(
     "Select Benchmark Employees",
     options=employee_list,
@@ -69,13 +54,10 @@ benchmarks = st.sidebar.multiselect(
 )
 
 if not benchmarks:
-    st.sidebar.warning("⚠️ No benchmark employees selected. Please select at least one.")
+    st.sidebar.warning(" No benchmark employees selected. Please select at least one.")
     st.stop()
 
-# =====================================================
-# 🧩 6️⃣ Tombol Run
-# =====================================================
-run_btn = st.sidebar.button("🔄 Run Talent Match Analysis")
+run_btn = st.sidebar.button(" Run Talent Match Analysis")
 
 
 # Pastikan state disiapkan
@@ -96,22 +78,17 @@ def make_uuid_list_str(ids):
         return "''"
     return ",".join(f"'{str(i)}'" for i in ids)
 
-
-
-# =====================================================
-# === WHEN RUN BUTTON PRESSED ===
-# =====================================================
 if run_btn:
-    st.title("🚀 AI Talent Match Intelligence Dashboard")
+    st.title(" AI Talent Match Intelligence Dashboard")
 
-    # 1️⃣ Insert or parameterize a new job_vacancy_id
+    # 1Insert or parameterize a new job_vacancy_id
     job_vacancy_id = str(uuid.uuid4())
 
     # Pastikan benchmark disimpan sebagai text list
     benchmarks = [str(b) for b in benchmarks]
 
     if not benchmarks:
-        st.error("❌ No benchmark employees selected or found. Please check Supabase data or CSV.")
+        st.error("No benchmark employees selected or found. Please check Supabase data or CSV.")
         st.stop()
 
     supabase.table("talent_benchmarks").insert({
@@ -126,7 +103,7 @@ if run_btn:
     benchmarks_array = make_uuid_array_str(benchmarks)
     benchmarks_str = make_uuid_list_str(benchmarks)
 
-    # 2️⃣ & 3️⃣ Query recomputed data dynamically from Supabase
+    # 2 & 3 Query recomputed data dynamically from Supabase
     query = f"""
     WITH benchmark_iq AS (
         SELECT 
@@ -285,48 +262,39 @@ if run_btn:
     query = query.strip().rstrip(";")
 
     # st.code(query, language="sql")
-    # st.write("🧩 Benchmarks str:", benchmarks_str)
+    # st.write(" Benchmarks str:", benchmarks_str)
 
-    # st.write("🧱 Benchmarks:", benchmarks)
-    # st.write("🧱 Benchmarks_str:", benchmarks_str)
+    # st.write(" Benchmarks:", benchmarks)
+    # st.write("Benchmarks_str:", benchmarks_str)
 
+    # Eksekusi query via RPC Supabase
 
-    # =====================================
-    # 🔹 Eksekusi query via RPC Supabase
-    # =====================================
     response = supabase.rpc("exec_sql", {"query": query}).execute()
-    # st.write("✅ Raw RPC response:", response.data)
+    # st.write("Raw RPC response:", response.data)
 
     if not response.data:
-        st.error("❌ No data returned from Supabase RPC. Check your SQL query or exec_sql() function.")
+        st.error("No data returned from Supabase RPC. Check your SQL query or exec_sql() function.")
         st.stop()
 
-    # =====================================
-    # 🔹 Parse hasil JSON dari kolom "result"
-    # =====================================
+    # Parse hasil JSON dari kolom "result"
     try:
         data = [row["result"] for row in response.data if "result" in row]
         df = pd.DataFrame(data)
-        # st.success(f"✅ {len(df)} rows loaded from Supabase.")
+        # st.success(f" {len(df)} rows loaded from Supabase.")
     except Exception as e:
-        st.error(f"❌ Failed to parse JSON result: {e}")
+        st.error(f"Failed to parse JSON result: {e}")
         st.stop()
-
-    # ❌ HAPUS BARIS INI (menimpa df yang benar)
-    # df = pd.DataFrame(response.data)
-
 
     # --- Fix tipe data employee_id ke string ---
     if "employee_id" in df.columns:
         df["employee_id"] = df["employee_id"].astype(str)
 
-    # st.write("✅ Columns loaded:", list(df.columns))
-
+    # st.write("Columns loaded:", list(df.columns))
 
     # --- Fix tipe data employee_id ke string ---
     df["employee_id"] = df["employee_id"].astype(str)
 
-    # 4️⃣ Compute dynamic baseline from selected benchmark employees
+    # 4 Compute dynamic baseline from selected benchmark employees
     baseline = df[df["employee_id"].isin(benchmarks)]
     medians = (
         baseline.groupby("tv_name")["tv_match_rate"]
@@ -363,16 +331,13 @@ if run_btn:
     st.session_state.leaderboard = leaderboard
     st.session_state.job_vacancy_id = job_vacancy_id
 
-
-# =====================================================
 # === DISPLAY DASHBOARD ===
-# =====================================================
 if st.session_state.analysis_data is not None:
     merged = st.session_state.analysis_data
     leaderboard = st.session_state.leaderboard
     job_vacancy_id = st.session_state.job_vacancy_id
 
-    st.subheader(f"📋 Ranked Talent List for {role} ({level})")
+    st.subheader(f"Ranked Talent List for {role} ({level})")
     st.dataframe(leaderboard.head(10), use_container_width=True)
 
     selected_name = st.selectbox(
@@ -417,7 +382,7 @@ if st.session_state.analysis_data is not None:
         st.plotly_chart(fig_dist, use_container_width=True)
 
     # --- Heatmap per TV ---
-    st.subheader("🔥 Candidate TV Match Heatmap")
+    st.subheader("Candidate TV Match Heatmap")
     pivot = cand.pivot_table(index="tv_name", values="tv_match_rate", aggfunc="mean")
     fig_heat = px.imshow(
         pivot, color_continuous_scale="RdYlGn", aspect="auto",
@@ -426,11 +391,11 @@ if st.session_state.analysis_data is not None:
     st.plotly_chart(fig_heat, use_container_width=True)
 
     # ========== AI INSIGHT ==========
-    st.markdown("### 🤖 AI-Generated Insights")
+    st.markdown("### AI-Generated Insights")
 
     API_KEY = st.secrets.get("OPENROUTER_API_KEY", None)
     if not API_KEY:
-        st.warning("⚠️ Add your OpenRouter API key in .streamlit/secrets.toml to enable AI insight.")
+        st.warning("Add your OpenRouter API key in .streamlit/secrets.toml to enable AI insight.")
     else:
         summary = merged.groupby("tgv_name")["tgv_match_rate"].mean().reset_index()
         text_summary = summary.to_string(index=False)
