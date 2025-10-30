@@ -24,12 +24,16 @@ To analyze and model what differentiates *high-performing employees* (Rating 5) 
 
 ## System Architecture
 
-```mermaid
-flowchart TD
-A[Supabase Database] --> B[SQL Scoring Engine (CTE Query)]
-B --> C[exec_sql() RPC Function]
-C --> D[Streamlit App]
-D --> E[AI Insight Generator (OpenRouter API)]
-```
+Supabase Database  
+|  
+SQL Scoring Engine (CTE Query)  
+|  
+exec_sql() RPC Function  
+|  
+Streamlit App  
+|  
+AI Insight Generator (OpenRouter API)
+
+__________________________________________________________________________________________
 
 link dashboard: https://ai-talent-match-dashboard.streamlit.app/
